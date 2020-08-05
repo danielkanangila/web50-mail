@@ -88,16 +88,62 @@ function view_email(mail_id) {
 }
 
 // components
-function Mail({ id, sender, recipients, subject, body, timestamp }) {
+function Mail(emails) {
   // update read if current tab is inbox
   if (current_tab === "inbox") {
-    fetch(`/emails/${id}`, {
+    fetch(`/emails/${emails.id}`, {
       method: "PUT",
       body: JSON.stringify({
         read: true,
       }),
     });
   }
+
+  render("#email-view", MailCard(emails), "innerHTML");
+}
+
+function MailCard({ id, sender, recipients, subject, body, timestamp }) {
+  return createComponent(`
+    <div class="mail-card">
+      <h3>${subject}</h3>
+      <div class="d-flex align-items-center w-100 mt-3">
+        <h5 class="mb-1 mr-2">
+          ${sender}
+        </h5>
+        <small>${timestamp}</small>
+      </div>
+      <a class="text-muted" data-toggle="collapse" href="#collapseExample" role="button" aria-expanded="false" aria-controls="collapseExample">
+        click for details
+      </a>
+      <div class="collapse" id="collapseExample">
+        <div class="card card-body bg-light">
+          <table class="table table-sm table-borderless">
+            <tbody>
+              <tr>
+                <td><small>from:</small></td>
+                <td><small>${sender}</small></td>
+              </tr>
+              <tr>
+                <td><small>to:</small></td>
+                <td><small>${recipients.join(" ,")}</small></td>
+              </tr>
+              <tr>
+                <td><small>subject:</small></td>
+                <td><small>${subject}</td>
+              </tr>
+              <tr>
+                <td><small>date:</small> </td>
+                <td><small>${timestamp}</small></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="mail-body mt-3">
+        <p>${body}</p>
+      </div>
+    </div>
+  `);
 }
 
 function MailListItem({ id, sender, subject, timestamp, read }) {
@@ -154,9 +200,11 @@ function sendMail(data) {
     });
 }
 
-function render(rootSelector, component) {
+function render(rootSelector, component, action) {
   const root = document.querySelector(rootSelector);
-  root.appendChild(component);
+  action = typeof action !== "undefined" ? action : "appendChild";
+  if (action === "innerHTML") root[action] = component.outerHTML;
+  else root[action](component);
 }
 
 function showAlertError(message) {
