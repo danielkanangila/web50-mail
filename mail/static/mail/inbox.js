@@ -1,3 +1,4 @@
+let current_tab = null;
 document.addEventListener("DOMContentLoaded", function () {
   // Use buttons to toggle between views
   document
@@ -16,8 +17,11 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 function compose_email() {
+  // update current_tab
+  current_tab = "compose";
   // Show compose view and hide other views
   document.querySelector("#emails-view").style.display = "none";
+  document.querySelector("#email-view").style.display = "none";
   document.querySelector("#compose-view").style.display = "block";
 
   // form fields
@@ -50,8 +54,11 @@ function compose_email() {
 }
 
 function load_mailbox(mailbox) {
+  // update current_tab
+  current_tab = mailbox;
   // Show the mailbox and hide other views
   document.querySelector("#emails-view").style.display = "block";
+  document.querySelector("#email-view").style.display = "none";
   document.querySelector("#compose-view").style.display = "none";
 
   // Show the mailbox name
@@ -67,39 +74,38 @@ function load_mailbox(mailbox) {
     });
 }
 
-function sendMail(data) {
-  fetch("/emails", {
-    method: "POST",
-    body: JSON.stringify(data),
-  })
+function view_email(mail_id) {
+  // Show the email and hide other views
+  document.querySelector("#email-view").style.display = "block";
+  document.querySelector("#emails-view").style.display = "none";
+  document.querySelector("#compose-view").style.display = "none";
+
+  console.log(current_tab);
+
+  fetch(`/emails/${mail_id}`)
     .then((response) => response.json())
-    .then((result) => {
-      // if error, show error
-      if (result.error) return showAlertError(result.error);
-      // else go to the sent tab.
-      load_mailbox("sent");
-    });
+    .then((result) => console.log(result));
 }
 
 // components
-function MailListItem({ sender, subject, timestamp, read }) {
-  return `
-    <a href="#" class="list-group-item list-group-item-action ${
-      read ? " list-group-item-dark" : ""
-    }">
+function MailListItem({ id, sender, subject, timestamp, read }) {
+  return createComponent(`
+    <a href="javascript:void(0)" onclick="view_email(${id})" class="list-group-item list-group-item-action ${
+    read ? " list-group-item-dark" : ""
+  } mail-item">
       <div class="d-flex w-100 justify-content-between">
         <h5 class="mb-1">${sender}</h5>
         <small>${timestamp}</small>
       </div>
       <p class="mb-1">${subject}</p>
     </a>
-  `;
+  `);
 }
 
 function MailList(emails) {
   return createComponent(`
     <div class="list-group">
-      ${emails.map((email) => MailListItem(email)).join("")}
+      ${emails.map((email) => MailListItem(email).outerHTML).join("")}
     </div>
   `);
 }
@@ -117,11 +123,25 @@ function Mailbox(emails, mailbox) {
       };
     });
   }
-  console.log(emails);
   return renderMailbox(MailList(emails));
 }
 
 // helpers function
+
+function sendMail(data) {
+  fetch("/emails", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+    .then((response) => response.json())
+    .then((result) => {
+      // if error, show error
+      if (result.error) return showAlertError(result.error);
+      // else go to the sent tab.
+      load_mailbox("sent");
+    });
+}
+
 function renderMailbox(component) {
   const root = document.querySelector("#emails-view");
   root.appendChild(component);
