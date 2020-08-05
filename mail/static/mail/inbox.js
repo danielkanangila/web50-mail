@@ -32,6 +32,7 @@ function compose_email() {
   // handle form submit
   document.querySelector("#compose-form").addEventListener("submit", (e) => {
     e.preventDefault();
+    removeErrors();
     // form data serialization
     const data = {
       recipients: recipientsEl.value,
@@ -57,6 +58,13 @@ function load_mailbox(mailbox) {
   document.querySelector("#emails-view").innerHTML = `<h3>${
     mailbox.charAt(0).toUpperCase() + mailbox.slice(1)
   }</h3>`;
+
+  fetch(`/emails/${mailbox}`)
+    .then((response) => response.json())
+    .then((emails) => {
+      if (!emails) return;
+      Mailbox(emails, mailbox);
+    });
 }
 
 function sendMail(data) {
@@ -71,6 +79,52 @@ function sendMail(data) {
       // else go to the sent tab.
       load_mailbox("sent");
     });
+}
+
+// components
+function MailListItem({ sender, subject, timestamp, read }) {
+  return `
+    <a href="#" class="list-group-item list-group-item-action ${
+      read ? " list-group-item-dark" : ""
+    }">
+      <div class="d-flex w-100 justify-content-between">
+        <h5 class="mb-1">${sender}</h5>
+        <small>${timestamp}</small>
+      </div>
+      <p class="mb-1">${subject}</p>
+    </a>
+  `;
+}
+
+function MailList(emails) {
+  return createComponent(`
+    <div class="list-group">
+      ${emails.map((email) => MailListItem(email)).join("")}
+    </div>
+  `);
+}
+
+function Mailbox(emails, mailbox) {
+  if (mailbox === "sent") {
+    // By default MailListItem component show only a sender,
+    // change the value of all sender properties to recipients if is in sent box
+    emails = emails.map((email) => {
+      return {
+        ...email,
+        sender: `To: ${email.recipients[0]} ${
+          email.recipients.length > 1 ? " and Others..." : ""
+        }`,
+      };
+    });
+  }
+  console.log(emails);
+  return renderMailbox(MailList(emails));
+}
+
+// helpers function
+function renderMailbox(component) {
+  const root = document.querySelector("#emails-view");
+  root.appendChild(component);
 }
 
 function showAlertError(message) {
@@ -119,4 +173,20 @@ function validate(data) {
 
 function showFormErrors(errors) {
   errors.forEach(({ element, message }) => addErrorToField(element, message));
+}
+
+function createComponent(string) {
+  const parser = new DOMParser(),
+    content = "text/html",
+    DOM = parser.parseFromString(string, content);
+
+  return DOM.body.childNodes[0];
+}
+
+function removeErrors() {
+  document.querySelectorAll(".invalid-feedback").forEach((el) => el.remove());
+  document
+    .querySelectorAll("input")
+    .forEach((el) => el.classList.remove("is-invalid"));
+  document.querySelectorAll(".alert").forEach((el) => el.remove());
 }
