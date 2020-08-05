@@ -41,7 +41,7 @@ function compose_email() {
     // validation
     const errors = validate(data);
 
-    if (errors) return showFormErrors(errors);
+    if (errors.length) return showFormErrors(errors);
 
     // sendMail data if form is valid
     sendMail(data);
@@ -57,6 +57,26 @@ function load_mailbox(mailbox) {
   document.querySelector("#emails-view").innerHTML = `<h3>${
     mailbox.charAt(0).toUpperCase() + mailbox.slice(1)
   }</h3>`;
+}
+
+function sendMail(data) {
+  fetch("/emails", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+    .then((response) => response.json())
+    .then((result) => {
+      if (result.error) return showAlertError(result.error);
+    });
+}
+
+function showAlertError(message) {
+  const errorEl = document.createElement("div");
+  const messageNode = document.createTextNode(message);
+
+  errorEl.classList.add("alert", "alert-danger");
+  errorEl.appendChild(messageNode);
+  document.querySelector("form").prepend(errorEl);
 }
 
 function addErrorToField(el, message) {
@@ -96,13 +116,4 @@ function validate(data) {
 
 function showFormErrors(errors) {
   errors.forEach(({ element, message }) => addErrorToField(element, message));
-}
-
-function sendMail(data) {
-  fetch("/emails", {
-    method: "POST",
-    body: JSON.stringify(data),
-  })
-    .then((response) => console.log(response.json()))
-    .then((result) => console.log(result));
 }
