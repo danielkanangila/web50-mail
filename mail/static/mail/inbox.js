@@ -20,10 +20,29 @@ function compose_email() {
   document.querySelector("#emails-view").style.display = "none";
   document.querySelector("#compose-view").style.display = "block";
 
+  // form fields
+  const recipientsEl = document.querySelector("#compose-recipients");
+  const subjectEl = document.querySelector("#compose-subject");
+  const bodyEl = document.querySelector("#compose-body");
   // Clear out composition fields
-  document.querySelector("#compose-recipients").value = "";
-  document.querySelector("#compose-subject").value = "";
-  document.querySelector("#compose-body").value = "";
+  recipientsEl.value = "";
+  subjectEl.value = "";
+  bodyEl.value = "";
+
+  // handle form submit
+  document.querySelector("#compose-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    // form data serialization
+    const data = {
+      recipients: recipientsEl.value,
+      subject: subjectEl.value,
+      body: bodyEl.value,
+    };
+    // validation
+    const errors = validate(data);
+
+    if (errors) return showFormErrors(errors);
+  });
 }
 
 function load_mailbox(mailbox) {
@@ -35,4 +54,38 @@ function load_mailbox(mailbox) {
   document.querySelector("#emails-view").innerHTML = `<h3>${
     mailbox.charAt(0).toUpperCase() + mailbox.slice(1)
   }</h3>`;
+}
+
+function addErrorToField(el, message) {
+  const parentEl = el.parentElement;
+  const errorEl = document.createElement("div");
+  const messageNode = document.createTextNode(message);
+
+  errorEl.classList.add("invalid-feedback");
+  el.classList.add("is-invalid");
+
+  errorEl.appendChild(messageNode);
+  parentEl.appendChild(errorEl);
+}
+
+function validate(data) {
+  const errors = [];
+  if (!data.recipients)
+    errors.push({
+      element: document.querySelector("#compose-recipients"),
+      message: "Recipient(s) is/are required.",
+    });
+  if (!data.subject)
+    errors.push({
+      element: document.querySelector("#compose-subject"),
+      message: "Subject are required.",
+    });
+
+  return errors;
+}
+
+function showFormErrors(errors) {
+  errors.forEach(function ({ element, message }) {
+    addErrorToField(element, message);
+  });
 }
