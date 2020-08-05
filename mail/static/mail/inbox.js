@@ -80,14 +80,26 @@ function view_email(mail_id) {
   document.querySelector("#emails-view").style.display = "none";
   document.querySelector("#compose-view").style.display = "none";
 
-  console.log(current_tab);
-
   fetch(`/emails/${mail_id}`)
     .then((response) => response.json())
-    .then((result) => console.log(result));
+    .then((result) => {
+      if (result) Mail(result);
+    });
 }
 
 // components
+function Mail({ id, sender, recipients, subject, body, timestamp }) {
+  // update read if current tab is inbox
+  if (current_tab === "inbox") {
+    fetch(`/emails/${id}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        read: true,
+      }),
+    });
+  }
+}
+
 function MailListItem({ id, sender, subject, timestamp, read }) {
   return createComponent(`
     <a href="javascript:void(0)" onclick="view_email(${id})" class="list-group-item list-group-item-action ${
