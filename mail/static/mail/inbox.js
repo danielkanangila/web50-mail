@@ -135,7 +135,7 @@ function Mailbox(emails, mailbox) {
       };
     });
   }
-  return renderMailbox(MailList(emails));
+  return render("#emails-view", MailList(emails));
 }
 
 // helpers function
@@ -154,8 +154,8 @@ function sendMail(data) {
     });
 }
 
-function renderMailbox(component) {
-  const root = document.querySelector("#emails-view");
+function render(rootSelector, component) {
+  const root = document.querySelector(rootSelector);
   root.appendChild(component);
 }
 
