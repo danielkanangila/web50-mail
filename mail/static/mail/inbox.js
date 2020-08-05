@@ -101,12 +101,20 @@ function Mail(emails) {
   render("#email-view", MailCard(emails), "innerHTML");
 }
 
-function MailCard({ sender, recipients, subject, body, timestamp, archived }) {
+function MailCard({
+  id,
+  sender,
+  recipients,
+  subject,
+  body,
+  timestamp,
+  archived,
+}) {
   return createComponent(`
     <div class="mail-card">
       ${
-        current_tab === "inbox" || current_tab === "archived"
-          ? MailToolbar({ archived }).outerHTML
+        current_tab === "inbox" || current_tab === "archive"
+          ? MailToolbar({ id, archived }).outerHTML
           : ""
       }
       <h3>${subject}</h3>
@@ -150,11 +158,11 @@ function MailCard({ sender, recipients, subject, body, timestamp, archived }) {
   `);
 }
 
-function MailToolbar({ archived }) {
+function MailToolbar({ id, archived }) {
   let btnArchiveTitle = archived ? "unarchive" : "archive";
   return createComponent(`
   <div class="btn-group mb-3" role="group">
-    <button type="button" class="btn btn-sm btn-outline-primary" data-toggle="tooltip" data-placement="bottom" title="${btnArchiveTitle}">
+    <button onclick="updateArchive(${id}, ${archived})" type="button" class="btn btn-sm btn-outline-primary" data-toggle="tooltip" data-placement="bottom" title="${btnArchiveTitle}">
       <span class="material-icons icons">
         ${btnArchiveTitle}
       </span>
@@ -205,6 +213,16 @@ function Mailbox(emails, mailbox) {
 }
 
 // helpers function
+function updateArchive(mail_id, archived) {
+  fetch(`/emails/${mail_id}`, {
+    method: "PUT",
+    body: JSON.stringify({
+      archived: !archived,
+    }),
+  });
+  load_mailbox("inbox");
+  window.location.reload();
+}
 
 function sendMail(data) {
   fetch("/emails", {
