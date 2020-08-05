@@ -66,7 +66,10 @@ function sendMail(data) {
   })
     .then((response) => response.json())
     .then((result) => {
+      // if error, show error
       if (result.error) return showAlertError(result.error);
+      // else go to the sent tab.
+      load_mailbox("sent");
     });
 }
 
