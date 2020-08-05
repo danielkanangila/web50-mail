@@ -98,13 +98,17 @@ function Mail(emails) {
       }),
     });
   }
-
   render("#email-view", MailCard(emails), "innerHTML");
 }
 
-function MailCard({ id, sender, recipients, subject, body, timestamp }) {
+function MailCard({ sender, recipients, subject, body, timestamp, archived }) {
   return createComponent(`
     <div class="mail-card">
+      ${
+        current_tab === "inbox" || current_tab === "archived"
+          ? MailToolbar({ archived }).outerHTML
+          : ""
+      }
       <h3>${subject}</h3>
       <div class="d-flex align-items-center w-100 mt-3">
         <h5 class="mb-1 mr-2">
@@ -143,6 +147,22 @@ function MailCard({ id, sender, recipients, subject, body, timestamp }) {
         <p>${body}</p>
       </div>
     </div>
+  `);
+}
+
+function MailToolbar({ archived }) {
+  let btnArchiveTitle = archived ? "unarchive" : "archive";
+  return createComponent(`
+  <div class="btn-group mb-3" role="group">
+    <button type="button" class="btn btn-sm btn-outline-primary" data-toggle="tooltip" data-placement="bottom" title="${btnArchiveTitle}">
+      <span class="material-icons icons">
+        ${btnArchiveTitle}
+      </span>
+    </button>
+    <button type="button" class="btn btn-sm btn-outline-primary" data-toggle="tooltip" data-placement="bottom" title="Reply">
+      <span class="material-icons icons">reply</span>
+    </button>
+  </div>
   `);
 }
 
