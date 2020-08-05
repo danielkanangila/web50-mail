@@ -42,6 +42,9 @@ function compose_email() {
     const errors = validate(data);
 
     if (errors) return showFormErrors(errors);
+
+    // sendMail data if form is valid
+    sendMail(data);
   });
 }
 
@@ -69,7 +72,14 @@ function addErrorToField(el, message) {
 }
 
 function validate(data) {
+  // remove all error div in the dom and invalid class on inputs
+  document.querySelectorAll(".invalid-feedback").forEach((el) => el.remove());
+  document
+    .querySelectorAll("input")
+    .forEach((el) => el.classList.remove("is-invalid"));
+  // start validation
   const errors = [];
+
   if (!data.recipients)
     errors.push({
       element: document.querySelector("#compose-recipients"),
@@ -85,7 +95,14 @@ function validate(data) {
 }
 
 function showFormErrors(errors) {
-  errors.forEach(function ({ element, message }) {
-    addErrorToField(element, message);
-  });
+  errors.forEach(({ element, message }) => addErrorToField(element, message));
+}
+
+function sendMail(data) {
+  fetch("/emails", {
+    method: "POST",
+    body: JSON.stringify(data),
+  })
+    .then((response) => console.log(response.json()))
+    .then((result) => console.log(result));
 }
