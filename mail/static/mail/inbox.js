@@ -16,7 +16,7 @@ document.addEventListener("DOMContentLoaded", function () {
   load_mailbox("inbox");
 });
 
-function compose_email() {
+function compose_email({ recipients = "", subject = "", body = "" }) {
   // update current_tab
   current_tab = "compose";
   // Show compose view and hide other views
@@ -28,10 +28,10 @@ function compose_email() {
   const recipientsEl = document.querySelector("#compose-recipients");
   const subjectEl = document.querySelector("#compose-subject");
   const bodyEl = document.querySelector("#compose-body");
-  // Clear out composition fields
-  recipientsEl.value = "";
-  subjectEl.value = "";
-  bodyEl.value = "";
+  // initialize values, by default is empty
+  recipientsEl.value = recipients;
+  subjectEl.value = subject;
+  bodyEl.value = body;
 
   // handle form submit
   document.querySelector("#compose-form").addEventListener("submit", (e) => {
@@ -48,6 +48,20 @@ function compose_email() {
 
     if (errors.length) return showFormErrors(errors);
 
+    const sendMail = (data) => {
+      fetch("/emails", {
+        method: "POST",
+        body: JSON.stringify(data),
+      })
+        .then((response) => response.json())
+        .then((result) => {
+          // if error, show error
+          if (result.error) return showAlertError(result.error);
+          // else go to the sent tab.
+          load_mailbox("sent");
+        });
+    };
+
     // sendMail data if form is valid
     sendMail(data);
   });
@@ -60,11 +74,6 @@ function load_mailbox(mailbox) {
   document.querySelector("#emails-view").style.display = "block";
   document.querySelector("#email-view").style.display = "none";
   document.querySelector("#compose-view").style.display = "none";
-
-  // Show the mailbox name
-  document.querySelector("#emails-view").innerHTML = `<h3>${
-    mailbox.charAt(0).toUpperCase() + mailbox.slice(1)
-  }</h3>`;
 
   fetch(`/emails/${mailbox}`)
     .then((response) => response.json())
@@ -98,25 +107,19 @@ function Mail(emails) {
       }),
     });
   }
-  render("#email-view", MailCard(emails), "innerHTML");
+  render("#email-view", MailCard(emails));
 }
 
-function MailCard({
-  id,
-  sender,
-  recipients,
-  subject,
-  body,
-  timestamp,
-  archived,
-}) {
+function MailCard(email) {
+  return createComponent('<div class="mail-card"></div>', [
+    MailToolbar(email),
+    MailCardBody(email),
+  ]);
+}
+
+function MailCardBody({ sender, recipients, subject, body, timestamp }) {
   return createComponent(`
-    <div class="mail-card">
-      ${
-        current_tab === "inbox" || current_tab === "archive"
-          ? MailToolbar({ id, archived }).outerHTML
-          : ""
-      }
+    <div class="mail-card--body">
       <h3>${subject}</h3>
       <div class="d-flex align-items-center w-100 mt-3">
         <h5 class="mb-1 mr-2">
@@ -152,26 +155,53 @@ function MailCard({
         </div>
       </div>
       <div class="mail-body mt-3">
-        <p>${body}</p>
+        <p id="myP">${body}</p>
       </div>
     </div>
   `);
 }
 
-function MailToolbar({ id, archived }) {
-  let btnArchiveTitle = archived ? "unarchive" : "archive";
-  return createComponent(`
-  <div class="btn-group mb-3" role="group">
-    <button onclick="updateArchive(${id}, ${archived})" type="button" class="btn btn-sm btn-outline-primary" data-toggle="tooltip" data-placement="bottom" title="${btnArchiveTitle}">
-      <span class="material-icons icons">
-        ${btnArchiveTitle}
-      </span>
-    </button>
-    <button type="button" class="btn btn-sm btn-outline-primary" data-toggle="tooltip" data-placement="bottom" title="Reply">
-      <span class="material-icons icons">reply</span>
-    </button>
-  </div>
+function MailToolbar(email) {
+  let btnArchiveTitle = email.archived ? "unarchive" : "archive";
+
+  const updateArchive = () => {
+    fetch(`/emails/${email.id}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        archived: !email.archived,
+      }),
+    });
+    load_mailbox("inbox");
+    window.location.reload();
+  };
+
+  const reply = () => {
+    let { sender, recipients, subject, body, timestamp } = email;
+    recipients = sender;
+    subject = subject.includes("RE") ? subject : `RE: ${subject}`;
+    body = `On ${timestamp} ${sender}  wrote: ${body}`;
+
+    compose_email({ recipients, subject, body });
+  };
+
+  const component = createComponent(`
+    <div class="btn-group mb-3" role="group">
+      <button id="btnArchive" type="button" class="btn btn-sm btn-outline-primary" data-toggle="tooltip" data-placement="bottom" title="${btnArchiveTitle}">
+        <span class="material-icons icons">
+          ${btnArchiveTitle}
+        </span>
+      </button>
+      <button id="btnReply" type="button" class="btn btn-sm btn-outline-primary" data-toggle="tooltip" data-placement="bottom" title="Reply">
+        <span class="material-icons icons">reply</span>
+      </button>
+    </div>
   `);
+
+  // biding event on component
+  component.on("click", "#btnArchive", updateArchive);
+  component.on("click", "#btnReply", reply);
+
+  return component;
 }
 
 function MailListItem({ id, sender, subject, timestamp, read }) {
@@ -209,41 +239,46 @@ function Mailbox(emails, mailbox) {
       };
     });
   }
-  return render("#emails-view", MailList(emails));
+
+  const component = createComponent(
+    `
+    <div>
+      <h3>${mailbox.charAt(0).toUpperCase() + mailbox.slice(1)}</h3>
+    </div>
+  `,
+    [MailList(emails)]
+  );
+
+  return render("#emails-view", component);
 }
 
-// helpers function
-function updateArchive(mail_id, archived) {
-  fetch(`/emails/${mail_id}`, {
-    method: "PUT",
-    body: JSON.stringify({
-      archived: !archived,
-    }),
-  });
-  load_mailbox("inbox");
-  window.location.reload();
-}
+// core function
 
-function sendMail(data) {
-  fetch("/emails", {
-    method: "POST",
-    body: JSON.stringify(data),
-  })
-    .then((response) => response.json())
-    .then((result) => {
-      // if error, show error
-      if (result.error) return showAlertError(result.error);
-      // else go to the sent tab.
-      load_mailbox("sent");
-    });
-}
-
-function render(rootSelector, component, action) {
+function render(rootSelector, component) {
   const root = document.querySelector(rootSelector);
-  action = typeof action !== "undefined" ? action : "appendChild";
-  if (action === "innerHTML") root[action] = component.outerHTML;
-  else root[action](component);
+  removeAllChildNodes(root);
+  root.appendChild(component);
 }
+
+function createComponent(string, components) {
+  const parser = new DOMParser(),
+    content = "text/html",
+    DOM = parser.parseFromString(string, content);
+
+  const rootNode = DOM.body.childNodes[0];
+
+  rootNode.__proto__.on = function (event, selector, callback) {
+    rootNode.querySelector(selector).addEventListener(event, callback);
+  };
+
+  if (components) {
+    components.forEach((component) => rootNode.appendChild(component));
+  }
+
+  return rootNode;
+}
+
+// helpers functions
 
 function showAlertError(message) {
   const errorEl = document.createElement("div");
@@ -293,18 +328,16 @@ function showFormErrors(errors) {
   errors.forEach(({ element, message }) => addErrorToField(element, message));
 }
 
-function createComponent(string) {
-  const parser = new DOMParser(),
-    content = "text/html",
-    DOM = parser.parseFromString(string, content);
-
-  return DOM.body.childNodes[0];
-}
-
 function removeErrors() {
   document.querySelectorAll(".invalid-feedback").forEach((el) => el.remove());
   document
     .querySelectorAll("input")
     .forEach((el) => el.classList.remove("is-invalid"));
   document.querySelectorAll(".alert").forEach((el) => el.remove());
+}
+
+function removeAllChildNodes(parent) {
+  while (parent.firstChild) {
+    parent.removeChild(parent.firstChild);
+  }
 }
