@@ -111,8 +111,11 @@ function Mail(emails) {
 }
 
 function MailCard(email) {
+  const showToolbar = () =>
+    current_tab === "inbox" || current_tab === "archive";
+
   return createComponent('<div class="mail-card"></div>', [
-    MailToolbar(email),
+    ...(showToolbar() ? [MailToolbar(email)] : []),
     MailCardBody(email),
   ]);
 }
@@ -205,10 +208,10 @@ function MailToolbar(email) {
 }
 
 function MailListItem({ id, sender, subject, timestamp, read }) {
-  return createComponent(`
-    <a href="javascript:void(0)" onclick="view_email(${id})" class="list-group-item list-group-item-action ${
-    read ? " list-group-item-dark" : ""
-  } mail-item">
+  const component = createComponent(`
+    <a href="javascript:void(0)" class="list-group-item list-group-item-action ${
+      read ? " list-group-item-dark" : ""
+    } mail-item">
       <div class="d-flex w-100 justify-content-between">
         <h5 class="mb-1">${sender}</h5>
         <small>${timestamp}</small>
@@ -216,14 +219,26 @@ function MailListItem({ id, sender, subject, timestamp, read }) {
       <p class="mb-1">${subject}</p>
     </a>
   `);
+
+  // bind click event
+  component.addEventListener("click", () => view_email(id));
+
+  return component;
 }
 
 function MailList(emails) {
-  return createComponent(`
+  // create container for MailItem
+  const MailNodesContainer = document.createElement("div");
+  // add create MailItem component to the node container
+  emails.map((email) => MailNodesContainer.appendChild(MailListItem(email)));
+  // Mail list node
+  return createComponent(
+    `
     <div class="list-group">
-      ${emails.map((email) => MailListItem(email).outerHTML).join("")}
     </div>
-  `);
+  `,
+    [MailNodesContainer]
+  );
 }
 
 function Mailbox(emails, mailbox) {
