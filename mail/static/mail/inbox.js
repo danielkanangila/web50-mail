@@ -97,17 +97,18 @@ function view_email(mail_id) {
 }
 
 // components
-function Mail(emails) {
+function Mail(email) {
   // update read if current tab is inbox
-  if (current_tab === "inbox") {
-    fetch(`/emails/${emails.id}`, {
+  if (current_tab === "inbox" && !email.read) {
+    fetch(`/emails/${email.id}`, {
       method: "PUT",
       body: JSON.stringify({
         read: true,
       }),
     });
   }
-  render("#email-view", MailCard(emails));
+
+  render("#email-view", MailCard(email));
 }
 
 function MailCard(email) {
@@ -157,7 +158,7 @@ function MailCardBody({ sender, recipients, subject, body, timestamp }) {
           </table>
         </div>
       </div>
-      <div class="mail-body mt-3">
+      <div class="mail-card-body">
         <p id="myP">${body}</p>
       </div>
     </div>
@@ -182,7 +183,7 @@ function MailToolbar(email) {
     let { sender, recipients, subject, body, timestamp } = email;
     recipients = sender;
     subject = subject.includes("RE") ? subject : `RE: ${subject}`;
-    body = `On ${timestamp} ${sender}  wrote: ${body}`;
+    body = `On ${timestamp} <br /> ${sender} <br />  wrote: <br /> ${body}`;
 
     compose_email({ recipients, subject, body });
   };

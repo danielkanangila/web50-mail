@@ -9,3 +9,7 @@ a.text-muted {
 .icons {
   font-size: 1rem;
 }
+
+.mail-card-body {
+  white-space: pre-wrap;
+}
